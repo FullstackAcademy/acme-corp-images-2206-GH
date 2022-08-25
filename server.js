@@ -4,6 +4,7 @@ const path = require('path');
 const { conn, Image } = require('./db');
 const fs = require('fs');
 
+app.use(express.json());
 app.use('/dist', express.static('dist'));
 app.use('/assets', express.static('assets'));
 
@@ -18,33 +19,42 @@ app.get('/api/images', async(req, res, next)=> {
   }
 });
 
+app.post('/api/images', async(req, res, next)=> {
+  try {
+    res.send(await Image.create(req.body));
+  }
+  catch(ex){
+    next(ex);
+  }
+});
+
+const readBase64 = (path)=> {
+  return new Promise((resolve, reject)=> {
+    fs.readFile(path, 'base64', (err, data)=> {
+      if(err){
+        reject(err);
+      }
+      else {
+        resolve(data);
+      }
+    });
+  });
+};
+
 const setup = async()=> {
   try {
     await conn.sync({ force: true });
-    fs.readFile('./seed_images/excel.png', 'base64', (err, data)=> {
-      if(err){
-        throw err;
-      }
-      else {
-        Image.create({ name: 'exel.png', data });
-        fs.readFile('./seed_images/git.png', 'base64', (err, data)=> {
-          if(err){
-            throw err;
-          }
-          else {
-            Image.create({ name: 'git.png', data });
-            fs.readFile('./seed_images/fullstack.png', 'base64', (err, data)=> {
-              if(err){
-                throw err;
-              }
-              else {
-                Image.create({ name: 'fullstack.png', data });
-              }
-            });
-          }
-        });
-      }
-    });
+    const [excel, git, fullstack] = await Promise.all([
+      readBase64('./seed_images/excel.png'),
+      readBase64('./seed_images/git.png'),
+      readBase64('./seed_images/fullstack.png'),
+    ]);
+
+    await Promise.all([
+      Image.create({ data: excel, name: 'excel'}),
+      Image.create({ data: git, name: 'git'}),
+      Image.create({ data: fullstack, name: 'fullstack'}),
+    ]);
 
     const port = process.env.port || 3000;
     app.listen(port, ()=> console.log(`listening on port ${port}`));

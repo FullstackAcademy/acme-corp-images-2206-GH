@@ -7,6 +7,9 @@ const images = (state = [], action)=> {
   if(action.type === 'SET_IMAGES'){
     return action.images;
   }
+  else if(action.type === 'CREATE_IMAGE'){
+    return [...state, action.image];
+  }
   return state;
 };
 
@@ -16,6 +19,13 @@ const store = createStore(
   }),
   applyMiddleware(thunk, logger)
 );
+
+export const uploadImage = (image)=> {
+  return async(dispatch)=> {
+    const response = await axios.post('/api/images', image);
+    dispatch({ type: 'CREATE_IMAGE', image: response.data});
+  }
+};
 
 export const fetchImages = ()=> {
   return async(dispatch)=> {
